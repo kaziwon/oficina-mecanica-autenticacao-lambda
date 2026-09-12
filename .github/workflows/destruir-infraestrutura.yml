@@ -1,0 +1,83 @@
+name: Destruir Lambda AWS
+
+env:
+  AWS_REGION: us-east-1
+  PROJECT_NAME: oficina-mecanica
+  DOTNET_VERSION: 10.0.x
+  TERRAFORM_VERSION: 1.15.8
+  TF_IN_AUTOMATION: true
+
+on:
+  workflow_dispatch:
+    inputs:
+      confirmation:
+        description: Digite DESTRUIR para confirmar
+        required: true
+        type: string
+
+concurrency:
+  group: oficina-mecanica-auth-lambda-deploy
+  cancel-in-progress: false
+
+jobs:
+  destroy:
+    name: Destroy authentication Lambda
+    runs-on: ubuntu-latest
+
+    permissions:
+      contents: read
+
+    steps:
+      - name: Validate confirmation
+        env:
+          CONFIRMATION: ${{ inputs.confirmation }}
+        run: test "$CONFIRMATION" = "DESTRUIR"
+
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup .NET
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: ${{ env.DOTNET_VERSION }}
+
+      - name: Setup Terraform
+        uses: hashicorp/setup-terraform@v3
+        with:
+          terraform_version: ${{ env.TERRAFORM_VERSION }}
+
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v6
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-session-token: ${{ secrets.AWS_SESSION_TOKEN }}
+          aws-region: ${{ env.AWS_REGION }}
+
+      - name: Locate shared Terraform state
+        id: state
+        run: |
+          account_id="$(aws sts get-caller-identity --query Account --output text)"
+          state_bucket="${PROJECT_NAME}-terraform-state-${account_id}"
+          aws s3api head-bucket --bucket "$state_bucket"
+          echo "state_bucket=${state_bucket}" >> "$GITHUB_OUTPUT"
+
+      - name: Prepare deployment package
+        run: |
+          dotnet restore OficinaMecanica.Auth.slnx
+          dotnet publish src/OficinaMecanica.Auth.Function/OficinaMecanica.Auth.Function.csproj \
+            --configuration Release \
+            --runtime linux-x64 \
+            --self-contained false \
+            --output artifacts/lambda
+
+      - name: Terraform init
+        run: >-
+          terraform -chdir=infra init
+          -input=false
+          -backend-config="bucket=${{ steps.state.outputs.state_bucket }}"
+
+      - name: Terraform destroy
+        env:
+          TF_VAR_state_bucket_name: ${{ steps.state.outputs.state_bucket }}
+        run: terraform -chdir=infra destroy -auto-approve -input=false

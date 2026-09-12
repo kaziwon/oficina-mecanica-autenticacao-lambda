@@ -1,0 +1,13 @@
+**/bin/
+**/obj/
+artifacts/
+.terraform/
+*.tfstate
+*.tfstate.*
+*.tfplan
+*.zip
+.DS_Store
+.idea/
+.vscode/
+TestResults/
+coverage/

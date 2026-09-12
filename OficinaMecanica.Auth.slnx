@@ -1,0 +1,11 @@
+<Solution>
+  <Folder Name="/src/">
+    <Project Path="src/OficinaMecanica.Auth.Application/OficinaMecanica.Auth.Application.csproj" />
+    <Project Path="src/OficinaMecanica.Auth.Domain/OficinaMecanica.Auth.Domain.csproj" />
+    <Project Path="src/OficinaMecanica.Auth.Function/OficinaMecanica.Auth.Function.csproj" />
+    <Project Path="src/OficinaMecanica.Auth.Infrastructure/OficinaMecanica.Auth.Infrastructure.csproj" />
+  </Folder>
+  <Folder Name="/tests/">
+    <Project Path="tests/OficinaMecanica.Auth.UnitTests/OficinaMecanica.Auth.UnitTests.csproj" />
+  </Folder>
+</Solution>

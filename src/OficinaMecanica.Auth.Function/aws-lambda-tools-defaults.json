@@ -1,0 +1,7 @@
+{
+  "configuration": "Release",
+  "function-runtime": "dotnet10",
+  "function-memory-size": 256,
+  "function-timeout": 15,
+  "function-handler": "OficinaMecanica.Auth.Function::OficinaMecanica.Auth.Function.Function::FunctionHandler"
+}
