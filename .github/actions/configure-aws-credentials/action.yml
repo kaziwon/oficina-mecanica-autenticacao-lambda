@@ -1,0 +1,68 @@
+name: Configure AWS credentials
+description: Normaliza e valida as credenciais temporarias antes de configurar a AWS
+
+inputs:
+  aws-access-key-id:
+    description: AWS access key ID
+    required: true
+  aws-secret-access-key:
+    description: AWS secret access key
+    required: true
+  aws-session-token:
+    description: AWS Academy session token
+    required: true
+  aws-region:
+    description: AWS region
+    required: true
+
+runs:
+  using: composite
+  steps:
+    - name: Normalize and validate credentials
+      id: credentials
+      shell: bash
+      env:
+        RAW_AWS_ACCESS_KEY_ID: ${{ inputs.aws-access-key-id }}
+        RAW_AWS_SECRET_ACCESS_KEY: ${{ inputs.aws-secret-access-key }}
+        RAW_AWS_SESSION_TOKEN: ${{ inputs.aws-session-token }}
+      run: |
+        normalize() {
+          printf '%s' "$1" | tr -d '[:space:]'
+        }
+
+        access_key_id="$(normalize "$RAW_AWS_ACCESS_KEY_ID")"
+        secret_access_key="$(normalize "$RAW_AWS_SECRET_ACCESS_KEY")"
+        session_token="$(normalize "$RAW_AWS_SESSION_TOKEN")"
+
+        if [[ ! "$access_key_id" =~ ^(AKIA|ASIA)[A-Z0-9]{16}$ ]]; then
+          echo "::error::AWS_ACCESS_KEY_ID invalido. Informe somente os 20 caracteres da credencial."
+          exit 1
+        fi
+
+        if [[ ${#secret_access_key} -ne 40 ]]; then
+          echo "::error::AWS_SECRET_ACCESS_KEY invalido. Informe somente os 40 caracteres da credencial."
+          exit 1
+        fi
+
+        if [[ -z "$session_token" ]]; then
+          echo "::error::AWS_SESSION_TOKEN nao configurado."
+          exit 1
+        fi
+
+        echo "::add-mask::$access_key_id"
+        echo "::add-mask::$secret_access_key"
+        echo "::add-mask::$session_token"
+
+        {
+          echo "aws_access_key_id=$access_key_id"
+          echo "aws_secret_access_key=$secret_access_key"
+          echo "aws_session_token=$session_token"
+        } >> "$GITHUB_OUTPUT"
+
+    - name: Configure credentials
+      uses: aws-actions/configure-aws-credentials@v6
+      with:
+        aws-access-key-id: ${{ steps.credentials.outputs.aws_access_key_id }}
+        aws-secret-access-key: ${{ steps.credentials.outputs.aws_secret_access_key }}
+        aws-session-token: ${{ steps.credentials.outputs.aws_session_token }}
+        aws-region: ${{ inputs.aws-region }}
