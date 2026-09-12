@@ -20,7 +20,8 @@ sequenceDiagram
     Lambda->>Lambda: Valida os digitos do CPF
     Lambda->>RDS: Consulta cliente e status
     RDS-->>Lambda: Cliente ativo
-    Lambda-->>Cliente: JWT assinado
+    Lambda-->>LambdaURL: HTTP 200 com JWT assinado
+    LambdaURL-->>Cliente: JWT e expiracao
     Cliente->>Kong: Authorization Bearer JWT
     Kong->>Kong: Valida assinatura e expiracao
     Kong->>API: Encaminha requisicao autorizada
@@ -111,6 +112,22 @@ dotnet test OficinaMecanica.Auth.slnx
 Os testes nao precisam de AWS nem de MySQL. Os gateways externos sao
 substituidos por implementacoes em memoria.
 
+Para validar tambem a infraestrutura sem criar recursos:
+
+```bash
+terraform fmt -check -recursive infra
+terraform -chdir=infra init -backend=false
+terraform -chdir=infra validate
+```
+
+## Collection Postman
+
+A collection versionada em
+[`docs/postman/oficina-mecanica-autenticacao-lambda.postman_collection.json`](docs/postman/oficina-mecanica-autenticacao-lambda.postman_collection.json)
+possui a chamada de autenticacao e salva automaticamente o JWT na variavel
+`token`. Depois do deploy, substitua a variavel `lambdaUrl` pelo endpoint exibido
+no Summary da entrega.
+
 ## CI/CD
 
 O workflow `Integracao continua - Lambda` roda automaticamente nos pull
@@ -123,6 +140,9 @@ O deploy e manual para preservar os creditos do AWS Academy:
 3. abra `Actions -> Entrega continua AWS - Lambda`;
 4. execute `Run workflow` a partir da `main`.
 
+O workflow executa todas as etapas seguintes sozinho: le os states remotos,
+compila o ZIP, executa `terraform plan`, cria a Lambda e testa o acesso ao RDS.
+
 Secrets obrigatorios:
 
 - `AWS_ACCESS_KEY_ID`;
@@ -132,6 +152,9 @@ Secrets obrigatorios:
 A entrega localiza o bucket e os estados Terraform compartilhados, compila o
 pacote ZIP, cria a Lambda e valida sua comunicacao com o RDS. A URL HTTPS aparece
 no Summary da execucao.
+
+A documentacao arquitetural completa, incluindo diagramas, RFCs e ADRs, esta no
+[`docs/README.md` da aplicacao principal](https://github.com/kaziwon/techchallengerm372882/blob/main/docs/README.md).
 
 ## Infraestrutura utilizada
 
