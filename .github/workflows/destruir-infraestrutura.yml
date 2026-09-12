@@ -59,10 +59,17 @@ jobs:
         run: |
           account_id="$(aws sts get-caller-identity --query Account --output text)"
           state_bucket="${PROJECT_NAME}-terraform-state-${account_id}"
-          aws s3api head-bucket --bucket "$state_bucket"
           echo "state_bucket=${state_bucket}" >> "$GITHUB_OUTPUT"
 
+          if aws s3api head-object --bucket "$state_bucket" --key oficina-mecanica/auth-lambda/terraform.tfstate >/dev/null 2>&1; then
+            echo "exists=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "exists=false" >> "$GITHUB_OUTPUT"
+            echo "O state da Lambda nao existe. Nada para destruir."
+          fi
+
       - name: Prepare deployment package
+        if: steps.state.outputs.exists == 'true'
         run: |
           dotnet restore OficinaMecanica.Auth.slnx
           dotnet publish src/OficinaMecanica.Auth.Function/OficinaMecanica.Auth.Function.csproj \
@@ -72,12 +79,14 @@ jobs:
             --output artifacts/lambda
 
       - name: Terraform init
+        if: steps.state.outputs.exists == 'true'
         run: >-
           terraform -chdir=infra init
           -input=false
           -backend-config="bucket=${{ steps.state.outputs.state_bucket }}"
 
       - name: Terraform destroy
+        if: steps.state.outputs.exists == 'true'
         env:
           TF_VAR_state_bucket_name: ${{ steps.state.outputs.state_bucket }}
         run: terraform -chdir=infra destroy -auto-approve -input=false

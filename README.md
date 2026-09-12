@@ -118,7 +118,7 @@ requests e na `main`. Ele compila, executa os testes e valida o Terraform.
 
 O deploy e manual para preservar os creditos do AWS Academy:
 
-1. execute primeiro `Entrega continua AWS` no repositorio da aplicacao;
+1. execute, nesta ordem, as entregas dos repositorios de banco, Kubernetes e aplicacao;
 2. atualize os tres GitHub Secrets deste repositorio;
 3. abra `Actions -> Entrega continua AWS - Lambda`;
 4. execute `Run workflow` a partir da `main`.
@@ -143,8 +143,16 @@ O Terraform deste repositorio cria somente os recursos pertencentes a funcao:
 - funcao Lambda associada ao `LabRole` do AWS Academy;
 - Function URL publica com CORS para POST; o handler rejeita outros metodos com HTTP 405.
 
-A VPC, as sub-redes, o RDS e o segredo JWT sao lidos dos estados da plataforma
-principal. Por isso, a infraestrutura principal deve existir antes deste deploy.
+A VPC, as sub-redes e o RDS sao lidos do state do repositorio de banco. O
+segredo JWT e lido do state da aplicacao, garantindo que a Lambda emita tokens
+aceitos pelo Kong. Por isso, esta e a quarta e ultima entrega do ambiente.
+
+Ordem completa:
+
+1. [banco](https://github.com/kaziwon/oficina-mecanica-infra-banco);
+2. [Kubernetes](https://github.com/kaziwon/oficina-mecanica-infra-kubernetes);
+3. [aplicacao principal](https://github.com/kaziwon/techchallengerm372882);
+4. Lambda de autenticacao, este repositorio.
 
 ## Remocao
 

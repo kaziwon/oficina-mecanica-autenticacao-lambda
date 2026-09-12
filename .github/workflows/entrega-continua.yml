@@ -55,10 +55,20 @@ jobs:
         run: |
           account_id="$(aws sts get-caller-identity --query Account --output text)"
           state_bucket="${PROJECT_NAME}-terraform-state-${account_id}"
-          aws s3api head-bucket --bucket "$state_bucket" || {
-            echo "::error::Execute primeiro a Entrega continua AWS do repositorio da aplicacao."
+          aws s3api head-bucket --bucket "$state_bucket" >/dev/null || {
+            echo "::error::Execute primeiro as entregas de banco, Kubernetes e aplicacao."
             exit 1
           }
+
+          for state_key in \
+            oficina-mecanica/database/terraform.tfstate \
+            oficina-mecanica/application/terraform.tfstate; do
+            aws s3api head-object --bucket "$state_bucket" --key "$state_key" >/dev/null || {
+              echo "::error::State obrigatorio ausente: ${state_key}"
+              exit 1
+            }
+          done
+
           echo "state_bucket=${state_bucket}" >> "$GITHUB_OUTPUT"
 
       - name: Build deployment package

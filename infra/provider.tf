@@ -11,25 +11,25 @@ provider "aws" {
   }
 }
 
-data "terraform_remote_state" "platform" {
+data "terraform_remote_state" "database" {
   backend = "s3"
 
   config = {
-    bucket  = var.state_bucket_name
-    key     = "oficina-mecanica/platform/terraform.tfstate"
-    region  = var.aws_region
-    encrypt = true
+    bucket       = var.state_bucket_name
+    key          = "oficina-mecanica/database/terraform.tfstate"
+    region       = var.aws_region
+    use_lockfile = true
   }
 }
 
-data "terraform_remote_state" "workloads" {
+data "terraform_remote_state" "application" {
   backend = "s3"
 
   config = {
-    bucket  = var.state_bucket_name
-    key     = "oficina-mecanica/workloads/terraform.tfstate"
-    region  = var.aws_region
-    encrypt = true
+    bucket       = var.state_bucket_name
+    key          = "oficina-mecanica/application/terraform.tfstate"
+    region       = var.aws_region
+    use_lockfile = true
   }
 }
 
