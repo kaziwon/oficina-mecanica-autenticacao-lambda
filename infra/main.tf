@@ -2,14 +2,14 @@ locals {
   function_name = "${var.project_name}-autenticacao-cpf"
   artifact_dir  = "${path.module}/../artifacts/lambda"
 
-  database_host              = data.terraform_remote_state.platform.outputs.database_address
-  database_port              = tostring(data.terraform_remote_state.platform.outputs.database_port)
-  database_name              = data.terraform_remote_state.platform.outputs.database_name
-  database_username          = data.terraform_remote_state.platform.outputs.database_username
-  database_password          = data.terraform_remote_state.platform.outputs.database_password
-  database_subnet_ids        = data.terraform_remote_state.platform.outputs.database_subnet_ids
-  database_security_group_id = data.terraform_remote_state.platform.outputs.database_security_group_id
-  jwt_secret                 = data.terraform_remote_state.workloads.outputs.jwt_secret
+  database_host              = data.terraform_remote_state.database.outputs.database_address
+  database_port              = tostring(data.terraform_remote_state.database.outputs.database_port)
+  database_name              = data.terraform_remote_state.database.outputs.database_name
+  database_username          = data.terraform_remote_state.database.outputs.database_username
+  database_password          = data.terraform_remote_state.database.outputs.database_password
+  database_subnet_ids        = data.terraform_remote_state.database.outputs.database_subnet_ids
+  database_security_group_id = data.terraform_remote_state.database.outputs.database_security_group_id
+  jwt_secret                 = data.terraform_remote_state.application.outputs.jwt_secret
 }
 
 data "archive_file" "lambda" {
@@ -21,7 +21,7 @@ data "archive_file" "lambda" {
 resource "aws_security_group" "lambda" {
   name        = "${local.function_name}-sg"
   description = "Saida da Lambda de autenticacao para o RDS"
-  vpc_id      = data.terraform_remote_state.platform.outputs.vpc_id
+  vpc_id      = data.terraform_remote_state.database.outputs.vpc_id
 
   tags = {
     Name = "${local.function_name}-sg"

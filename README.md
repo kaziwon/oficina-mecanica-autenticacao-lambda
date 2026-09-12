@@ -20,7 +20,8 @@ sequenceDiagram
     Lambda->>Lambda: Valida os digitos do CPF
     Lambda->>RDS: Consulta cliente e status
     RDS-->>Lambda: Cliente ativo
-    Lambda-->>Cliente: JWT assinado
+    Lambda-->>LambdaURL: HTTP 200 com JWT assinado
+    LambdaURL-->>Cliente: JWT e expiracao
     Cliente->>Kong: Authorization Bearer JWT
     Kong->>Kong: Valida assinatura e expiracao
     Kong->>API: Encaminha requisicao autorizada
@@ -111,6 +112,22 @@ dotnet test OficinaMecanica.Auth.slnx
 Os testes nao precisam de AWS nem de MySQL. Os gateways externos sao
 substituidos por implementacoes em memoria.
 
+Para validar tambem a infraestrutura sem criar recursos:
+
+```bash
+terraform fmt -check -recursive infra
+terraform -chdir=infra init -backend=false
+terraform -chdir=infra validate
+```
+
+## Collection Postman
+
+A collection versionada em
+[`docs/postman/oficina-mecanica-autenticacao-lambda.postman_collection.json`](docs/postman/oficina-mecanica-autenticacao-lambda.postman_collection.json)
+possui a chamada de autenticacao e salva automaticamente o JWT na variavel
+`token`. Depois do deploy, substitua a variavel `lambdaUrl` pelo endpoint exibido
+no Summary da entrega.
+
 ## CI/CD
 
 O workflow `Integracao continua - Lambda` roda automaticamente nos pull
@@ -118,10 +135,13 @@ requests e na `main`. Ele compila, executa os testes e valida o Terraform.
 
 O deploy e manual para preservar os creditos do AWS Academy:
 
-1. execute primeiro `Entrega continua AWS` no repositorio da aplicacao;
+1. execute, nesta ordem, as entregas dos repositorios de banco, Kubernetes e aplicacao;
 2. atualize os tres GitHub Secrets deste repositorio;
 3. abra `Actions -> Entrega continua AWS - Lambda`;
 4. execute `Run workflow` a partir da `main`.
+
+O workflow executa todas as etapas seguintes sozinho: le os states remotos,
+compila o ZIP, executa `terraform plan`, cria a Lambda e testa o acesso ao RDS.
 
 Secrets obrigatorios:
 
@@ -133,6 +153,9 @@ A entrega localiza o bucket e os estados Terraform compartilhados, compila o
 pacote ZIP, cria a Lambda e valida sua comunicacao com o RDS. A URL HTTPS aparece
 no Summary da execucao.
 
+A documentacao arquitetural completa, incluindo diagramas, RFCs e ADRs, esta no
+[`docs/README.md` da aplicacao principal](https://github.com/kaziwon/techchallengerm372882/blob/main/docs/README.md).
+
 ## Infraestrutura utilizada
 
 O Terraform deste repositorio cria somente os recursos pertencentes a funcao:
@@ -143,8 +166,16 @@ O Terraform deste repositorio cria somente os recursos pertencentes a funcao:
 - funcao Lambda associada ao `LabRole` do AWS Academy;
 - Function URL publica com CORS para POST; o handler rejeita outros metodos com HTTP 405.
 
-A VPC, as sub-redes, o RDS e o segredo JWT sao lidos dos estados da plataforma
-principal. Por isso, a infraestrutura principal deve existir antes deste deploy.
+A VPC, as sub-redes e o RDS sao lidos do state do repositorio de banco. O
+segredo JWT e lido do state da aplicacao, garantindo que a Lambda emita tokens
+aceitos pelo Kong. Por isso, esta e a quarta e ultima entrega do ambiente.
+
+Ordem completa:
+
+1. [banco](https://github.com/kaziwon/oficina-mecanica-infra-banco);
+2. [Kubernetes](https://github.com/kaziwon/oficina-mecanica-infra-kubernetes);
+3. [aplicacao principal](https://github.com/kaziwon/techchallengerm372882);
+4. Lambda de autenticacao, este repositorio.
 
 ## Remocao
 
